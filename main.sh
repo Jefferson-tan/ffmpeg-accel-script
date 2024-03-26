@@ -49,4 +49,4 @@ else
 	printf "Unknown parameter"
 fi
 
-ffmpeg -vaapi_device /dev/dri/renderD128 -i "$inputfile" -vf $vidfilter -c:v $vidcodec -vsync passthrough -rc_mode CQP -qp $vidqual -c:a $audcodec "$outputfile.mp4"
+ffmpeg -vaapi_device /dev/dri/renderD128 -i "$inputfile" -vf $vidfilter -c:v $vidcodec -fps_mode passthrough -rc_mode CQP -qp $vidqual -c:a $audcodec "$outputfile.mp4"
