@@ -1,3 +1,4 @@
-SPDX-License-Identifier: LGPL-2.1-or-later OR Beerware
+# License
+This project is dual-licensed under `GNU Lesser General Public License 3.0 or later` or the `beerware` license
 
-Ignore the be gay do crime license lol, it's just for sh*ts and giggles
+SPDX-License-Identifier: LGPL-3.0-or-later OR Beerware
