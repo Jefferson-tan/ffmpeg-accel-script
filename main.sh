@@ -29,27 +29,34 @@ listGPU=$( (lshw -C video) 2>/dev/null | awk '$1=="vendor:"{$1=""; print}')
 declare -i GPUType
 GPUType=0
 
-# Function for detecting intel GPU to avoid duplicated codes
 detect_intel () {
     # echo -e "${BLUE}Intel${NC} GPU detected"
     Intel=true
 	GPUType+=1
 }
 
-# Logic for checking which GPU exists in system
-if (grep NVIDIA <<< $listGPU) 1>/dev/null ; then
-    # echo -e "${GREEN}NVIDIA${NC} GPU detected"
+detect_AMD () {
+	# echo -e "${RED}AMD${NC} GPU detected"
+	AMD=true
+	GPUType+=3
+}
+
+detect_Nvidia () {
+	# echo -e "${GREEN}NVIDIA${NC} GPU detected"
 	Nvidia=true
 	GPUType+=5
-elif (grep Intel <<< $listGPU) 1>/dev/null ; then
-    detect_intel
+}
+
+# Logic for checking which GPU exists in system
+if (grep NVIDIA <<< $listGPU) 1>/dev/null ; then
+    detect_Nvidia
 fi
 
 if (grep AMD <<< $listGPU) 1>/dev/null ; then
-    # echo -e "${RED}AMD${NC} GPU detected"
-	AMD=true
-	GPUType+=3
-elif (grep Intel <<< $listGPU) 1>/dev/null ; then
+	detect_AMD
+fi
+
+if (grep Intel <<< $listGPU) 1>/dev/null ; then
     detect_intel
 else
     echo Unknown GPU
@@ -81,8 +88,8 @@ esac
 
 echo -e "--------------------\n"
 
-read -p 'Please type input name here: ' inputfile
-read -p 'Please type output name here (without extensions): ' outputfile
+read -p 'Please type input filename or path here: ' inputfile
+read -p 'Please type output filename or path here (without extensions): ' outputfile
 
 # Video codec choice
 PS3=$'Which video codec do you want to use? (Make sure your hardware supports it!)\n'
@@ -141,15 +148,18 @@ encType () {
 	case $GPUType in
 		1) # Intel GPU
 			hwEncode="$vidfilterQSV -c:v ${vidcodecchoice}_qsv -global_quality $vidqual"
-			hwDecode="-hwaccel qsv -hwaccel_output_format qsv -vcodec ${vidcodecchoice}_qsv"
+			hwDecode="-hwaccel qsv -hwaccel_output_format qsv -c:v ${vidcodecchoice}_qsv"
+			echo $vidcodecchoice
 			;;
 		3 | 4) # AMD GPU
 			hwEncode="$vidfilterVAAPI ${vidcodecchoice}_vaapi -rc_mode CQP -qp $vidqual"
 			hwDecode="-vaapi_device /dev/dri/renderD128"
+			echo $vidcodecchoice
 			;;
 		5 | 6 | 8) # Nvidia GPU
 			hwEncode="$vidfilterCUDA -c:v ${vidcodecchoice}_nvenc -cq $vidqual"
 			hwDecode="-hwaccel cuda -hwaccel_output_format cuda"
+			echo $vidcodecchoice
 			;;
 		*)
 			echo "Something went wrong!"
@@ -167,10 +177,12 @@ run_ffmpeg () {
 
 on_error() {
     echo -e "${RED}Exit code: $?${NC}"
+	# Detects if system is an Nvidia + Intel hybrid
     if [[ $GPUType == 6 || ! $? == 0 ]] ; then
 		read -p "Oh no! Nvidia transcoding failed! Do you want to try again with Intel QSV? " tryIntel
 		case $tryIntel in
 			[Yy][Ee][Ss] | [Yy] | [Tt][Rr][Uu][Ee] | [Tt])
+				# *Hopefully* overrides GPU type to Intel only so it'll only run the commands for Intel graphics
 				GPUType=1
 				echo ""
 				run_ffmpeg || on_error "Error occured!"
@@ -183,10 +195,12 @@ on_error() {
 				echo "Invalid input: $tryIntel"
 				;;
 		esac
+	# Detects if system is an Nvidia + AMD hybrid
 	elif [[ $GPUType == 8 || ! $? == 0 ]] ; then
 		read -p "Oh no! Nvidia transcoding failed! Do you want to try again with Intel QSV? " tryAMD
 		case $tryAMD in
 			[Yy][Ee][Ss] | [Yy] | [Tt][Rr][Uu][Ee] | [Tt])
+				# Same thing as comment on line 182 but AMD Edition
 				GPUType=3
 				echo ""
 				run_ffmpeg || on_error "Error occured!"
