@@ -135,7 +135,7 @@ resChange () {
 		vidfilterQSV="-vf format=qsv,hwupload,deinterlace_qsv,scale_qsv=w=$vidwidth:h=$vidheight"
 		vidfilterCUDA="-vf format=cuda,hwupload,yadif_cuda=deint=interlaced,scale_cuda=w=$vidwidth:h=$vidheight"
 	elif [[ $changeres == no || $changeres == n ]]; then
-		vidfilterVAAPI="-vf format=nv12,hwupload,deinterlace_vaapi=rate=field:auto=1"
+		vidfilterVAAPI="-vf format=nv12,hwupload"
 		vidfilterQSV="-vf format=qsv,hwupload,deinterlace_qsv"
 		vidfilterCUDA="-vf format=cuda,hwupload,yadif_cuda=deint=interlaced"
 	else
@@ -143,7 +143,7 @@ resChange () {
 	fi
 }
 
-# Choose encoder type based on detected GPUs
+# Choose encoder and decoder type based on detected GPUs
 encType () {
 	case $GPUType in
 		1) # Intel GPU
@@ -197,7 +197,7 @@ on_error() {
 		esac
 	# Detects if system is an Nvidia + AMD hybrid
 	elif [[ $GPUType == 8 || ! $? == 0 ]] ; then
-		read -p "Oh no! Nvidia transcoding failed! Do you want to try again with Intel QSV? " tryAMD
+		read -p "Oh no! Nvidia transcoding failed! Do you want to try again with AMD VAAPI? " tryAMD
 		case $tryAMD in
 			[Yy][Ee][Ss] | [Yy] | [Tt][Rr][Uu][Ee] | [Tt])
 				# Same thing as comment on line 182 but AMD Edition
